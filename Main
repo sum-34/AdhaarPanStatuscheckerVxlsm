@@ -1,0 +1,77 @@
+Option Explicit
+
+Sub AadharPanCheckStatus()
+Dim ws As Worksheet
+Dim AadhaarNumber As String
+Dim PanNumber As String
+Dim response As String
+Dim desc As String
+
+Set ws = ThisWorkbook.Worksheets("Control")
+AadhaarNumber = ws.Range("D3")
+PanNumber = ws.Range("D6")
+
+If Trim(AadhaarNumber) = "" And Trim(PanNumber) = "" Then
+    MsgBox "Aadhaar Number and Pan No is required.", vbExclamation
+    ws.Range("D2").Select
+    Exit Sub
+End If
+    
+' Validate Aadhaar Number (12-digit number)
+If Not IsNumeric(AadhaarNumber) Or Len(AadhaarNumber) <> 12 Then
+    MsgBox "Invalid Aadhaar Number. It should be a 12-digit number.", vbExclamation
+    ws.Range("D2").Select
+    Exit Sub
+End If
+
+' Validate PAN Number (10-character alphanumeric)
+If Len(PanNumber) <> 10 Or Not PanNumber Like "[A-Z][A-Z][A-Z][A-Z][A-Z][0-9][0-9][0-9][0-9][A-Z]" Then
+    MsgBox "Invalid PAN Number. It should be a 10-character alphanumeric identifier (e.g., ABCDE1234F).", vbExclamation
+    ws.Range("D6").Select
+    Exit Sub
+End If
+
+response = SendPostRequest(AadhaarNumber, PanNumber)
+On Error Resume Next
+    desc = Split(Split(response, "desc" & Chr(34) & ":" & Chr(34))(1), Chr(34))(0)
+On Error GoTo 0
+ws.Range("F3") = desc
+End Sub
+
+Function SendPostRequest(AadhaarNumber As String, PanNumber As String) As String
+
+Dim xmlhttp As Object
+Dim url As String
+Dim payload As String
+Dim response As String
+
+Set xmlhttp = CreateObject("MSXML2.XMLHTTP")
+url = "https://eportal.incometax.gov.in/iec/servicesapi/getEntity"
+payload = "{""aadhaarNumber"":""" & AadhaarNumber & """,""pan"":""" & PanNumber & """,""preLoginFlag"":""Y"",""serviceName"":""linkAadhaarPreLoginService""}"
+xmlhttp.Open "POST", url, False
+xmlhttp.setRequestHeader "Content-Type", "application/json"
+xmlhttp.send payload
+ 
+response = xmlhttp.responseText
+ 
+'MsgBox response
+ SendPostRequest = response
+Set xmlhttp = Nothing
+End Function
+
+
+Sub InfoWebFunction()
+Dim Msg As String
+Dim url As String
+
+url = "https://logieagle.com/"
+
+Msg = "Adhaar Pan Status checker" & Chr(10) & Chr(10) & "version: 1.1" & Chr(10) & Chr(10) & "Click yes to open developer webpage."
+
+If MsgBox(Msg, vbInformation + vbYesNo, "Info!") <> vbYes Then Exit Sub
+
+On Error Resume Next
+    ThisWorkbook.FollowHyperlink (url)
+On Error GoTo 0
+
+End Sub
